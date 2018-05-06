@@ -16,15 +16,43 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
     var peripheralManager : CBPeripheralManager? = nil
     
     let bladderVolumeServiceUUID = CBUUID(string: "00000000-7E10-41C1-B16F-4430B506CDE7")
-    let sensorArrayCharacteristicUUID = CBUUID(string: "00000001-7E10-41C1-B16F-4430B506CDE7")
     
-    var sensorArrayCharacteristic : CBCharacteristic? = nil
-    var bladderVolumeService : CBService? = nil
+    let sensorArrayCharacteristicUUID = CBUUID(string: "00000001-7E10-41C1-B16F-4430B506CDE7")
+    let led1CharacteristicUUID = CBUUID(string: "00000001-6E10-41C1-B16F-4430B506CDE7")
+    let led2CharacteristicUUID = CBUUID(string: "00000002-6E10-41C1-B16F-4430B506CDE7")
+    let led3CharacteristicUUID = CBUUID(string: "00000003-6E10-41C1-B16F-4430B506CDE7")
+    let led4CharacteristicUUID = CBUUID(string: "00000004-6E10-41C1-B16F-4430B506CDE7")
+    let led5CharacteristicUUID = CBUUID(string: "00000005-6E10-41C1-B16F-4430B506CDE7")
+    let led6CharacteristicUUID = CBUUID(string: "00000006-6E10-41C1-B16F-4430B506CDE7")
+    let led7CharacteristicUUID = CBUUID(string: "00000007-6E10-41C1-B16F-4430B506CDE7")
+    let led8CharacteristicUUID = CBUUID(string: "00000008-6E10-41C1-B16F-4430B506CDE7")
+
+    var ledCharacteristics = [CBMutableCharacteristic]()
+    
+    var sensorArrayCharacteristic : CBMutableCharacteristic? = nil
+    var led1Characteristic : CBMutableCharacteristic? = nil
+    var led2Characteristic : CBMutableCharacteristic? = nil
+    var led3Characteristic : CBMutableCharacteristic? = nil
+    var led4Characteristic : CBMutableCharacteristic? = nil
+    var led5Characteristic : CBMutableCharacteristic? = nil
+    var led6Characteristic : CBMutableCharacteristic? = nil
+    var led7Characteristic : CBMutableCharacteristic? = nil
+    var led8Characteristic : CBMutableCharacteristic? = nil
+
+    var bladderVolumeService : CBMutableService? = nil
     
     var sensorReadings : [UInt32]? = nil
     var sensorReadingData : Data? = nil
     
+    var centralIsSubscribed : Bool = false
+    var channelIsFull : Bool = false
+    
+    var timer : Timer? = nil
+    var ledIndex : Int = 0
+    
     @IBOutlet weak var textField: UITextView!
+    
+    
     
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
         print("Manager updated state: \(peripheral.state.rawValue)")
@@ -71,17 +99,89 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
 //                return
 //            }
             
-            request.value = sensorReadingData!.subdata(in: request.offset..<sensorReadingData!.count-request.offset)
+            request.value = sensorReadingData!.subdata(in: request.offset..<sensorReadingData!.count)
             peripheralManager?.respond(to: request, withResult: .success)
             print ("responded to request")
             textField.text.append("Responded to request\n")
-            
+        }
+        else if request.characteristic.uuid == led1CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: request.offset..<3)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led1 request\n")
+        }
+        else if request.characteristic.uuid == led2CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+3)..<6)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led2 request\n")
+        }
+        else if request.characteristic.uuid == led3CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+6)..<9)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led3 request\n")
+        }
+        else if request.characteristic.uuid == led4CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+9)..<12)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led4 request\n")
+        }
+        else if request.characteristic.uuid == led5CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+12)..<15)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led5 request\n")
+        }
+        else if request.characteristic.uuid == led6CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+15)..<18)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led6 request\n")
+        }
+        else if request.characteristic.uuid == led7CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+18)..<21)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led7 request\n")
+        }
+        else if request.characteristic.uuid == led8CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+21)..<24)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led8 request\n")
         }
         else
         {
             peripheralManager?.respond(to: request, withResult: .attributeNotFound)
             print ("invalid characteristic in request")
             textField.text.append("Invalid characteristic in request\n")
+        }
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager,
+                           central: CBCentral,
+                           didSubscribeTo characteristic: CBCharacteristic) {
+        if !centralIsSubscribed {
+            centralIsSubscribed = true
+            startMeasuring()
+        }
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
+        if centralIsSubscribed {
+            centralIsSubscribed = false
+            stopMeasuring()
+        }
+    }
+    
+    func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {
+        let data = sensorReadingData!.subdata(in: ((ledIndex - 1)*3)..<(ledIndex * 3))
+        let success = peripheralManager!.updateValue(data, for: ledCharacteristics[ledIndex-1], onSubscribedCentrals: nil)
+        if success {
+            ledIndex = (ledIndex % 8) + 1
+            channelIsFull = false
         }
     }
     
@@ -109,11 +209,20 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
         print ("Attempting to set up services...")
         textField.text.append("Attempting to set up services...\n")
         
-        let bladderVolumeService = CBMutableService(type: bladderVolumeServiceUUID, primary: true)
+        bladderVolumeService = CBMutableService(type: bladderVolumeServiceUUID, primary: true)
         sensorArrayCharacteristic = CBMutableCharacteristic(type: sensorArrayCharacteristicUUID, properties: CBCharacteristicProperties([.read]), value: nil, permissions: CBAttributePermissions([.readable]))
-        
-        bladderVolumeService.characteristics = [sensorArrayCharacteristic!]
-        peripheralManager?.add(bladderVolumeService)
+        led1Characteristic = CBMutableCharacteristic(type: led1CharacteristicUUID, properties: CBCharacteristicProperties([.read, .notify]), value: nil, permissions: CBAttributePermissions([.readable]))
+        led2Characteristic = CBMutableCharacteristic(type: led2CharacteristicUUID, properties: CBCharacteristicProperties([.read, .notify]), value: nil, permissions: CBAttributePermissions([.readable]))
+        led3Characteristic = CBMutableCharacteristic(type: led3CharacteristicUUID, properties: CBCharacteristicProperties([.read, .notify]), value: nil, permissions: CBAttributePermissions([.readable]))
+        led4Characteristic = CBMutableCharacteristic(type: led4CharacteristicUUID, properties: CBCharacteristicProperties([.read, .notify]), value: nil, permissions: CBAttributePermissions([.readable]))
+        led5Characteristic = CBMutableCharacteristic(type: led5CharacteristicUUID, properties: CBCharacteristicProperties([.read, .notify]), value: nil, permissions: CBAttributePermissions([.readable]))
+        led6Characteristic = CBMutableCharacteristic(type: led6CharacteristicUUID, properties: CBCharacteristicProperties([.read, .notify]), value: nil, permissions: CBAttributePermissions([.readable]))
+        led7Characteristic = CBMutableCharacteristic(type: led7CharacteristicUUID, properties: CBCharacteristicProperties([.read, .notify]), value: nil, permissions: CBAttributePermissions([.readable]))
+        led8Characteristic = CBMutableCharacteristic(type: led8CharacteristicUUID, properties: CBCharacteristicProperties([.read, .notify]), value: nil, permissions: CBAttributePermissions([.readable]))
+
+        ledCharacteristics = [led1Characteristic!, led2Characteristic!, led3Characteristic!, led4Characteristic!, led5Characteristic!, led6Characteristic!, led7Characteristic!, led8Characteristic!]
+        bladderVolumeService!.characteristics = [sensorArrayCharacteristic!, led1Characteristic!, led2Characteristic!, led3Characteristic!, led4Characteristic!, led5Characteristic!, led6Characteristic!, led7Characteristic!, led8Characteristic!]
+        peripheralManager?.add(bladderVolumeService!)
     }
     
     func startAdvertising() {
@@ -152,5 +261,35 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
         print(sensorReadingData!.count)
         print(sensorReadingData! as NSData)
     }
+    
+    @objc func sendSensorArray() {
+        if !channelIsFull {
+            if ledIndex == 1 {
+                populateReadings()
+                createReadingsBytes()
+            }
+            let data = sensorReadingData!.subdata(in: ((ledIndex - 1)*3)..<(ledIndex * 3))
+            let success = peripheralManager!.updateValue(data, for: ledCharacteristics[ledIndex-1], onSubscribedCentrals: nil)
+            if success {
+                ledIndex = (ledIndex % 8) + 1
+            }
+            else {
+                channelIsFull = true
+            }
+
+            
+        }
+    }
+    
+    func startMeasuring() {
+        ledIndex = 1
+        timer = Timer.scheduledTimer(timeInterval: 0.03, target: self, selector: #selector(sendSensorArray), userInfo: nil, repeats: true)
+
+    }
+    
+    func stopMeasuring() {
+        timer?.invalidate()
+    }
+    
 }
 
