@@ -188,8 +188,8 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        populateReadings()
-        createReadingsBytes()
+//        populateReadings()
+//        createReadingsBytes()
         startupBluetooth()
     }
 
@@ -238,10 +238,13 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
             sensorReadings?.append(arc4random_uniform(1048576))
         }
         
-        for i in 0...63 {
-            textField.text.append("\(sensorReadings![i]) ")
-            if (i + 1) % 4 == 0 {
-                textField.text.append("\n")
+        for i in 0...7 {
+            textField.text.append("LED \(i+1): ")
+            for j in 0...7 {
+                textField.text.append("\(sensorReadings![8*i + j]) ")
+                if (j + 1) % 4 == 0 {
+                    textField.text.append("\n")
+                }
             }
         }
     }
@@ -252,9 +255,9 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
             var n = sensorReadings?[i-1]
             let d = Data(buffer: UnsafeBufferPointer(start: &n, count: 1))
             let data = d.subdata(in: 0..<3)
-            print (n!)
-            print(data as NSData)
-            print(d.subdata(in: 0..<1) as NSData)
+            //print (n!)
+            //print(data as NSData)
+            //print(d.subdata(in: 0..<1) as NSData)
             
             sensorReadingData?.append(data)
         }
@@ -268,7 +271,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
                 populateReadings()
                 createReadingsBytes()
             }
-            let data = sensorReadingData!.subdata(in: ((ledIndex - 1)*3)..<(ledIndex * 3))
+            let data = sensorReadingData!.subdata(in: ((ledIndex - 1)*24)..<(ledIndex * 24))
             let success = peripheralManager!.updateValue(data, for: ledCharacteristics[ledIndex-1], onSubscribedCentrals: nil)
             if success {
                 ledIndex = (ledIndex % 8) + 1
