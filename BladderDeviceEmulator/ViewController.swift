@@ -53,144 +53,25 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
     @IBOutlet weak var textField: UITextView!
     
     
-    
-    func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
-        print("Manager updated state: \(peripheral.state.rawValue)")
-        textField.text.append("Manager updated state:")
 
-        if (peripheral.state == .poweredOn) {
-            textField.text.append(" poweredOn\n")
-            setupServices()
-        }
-        else {
-            textField.text.append(" other than poweredOn\n")
-        }
-    }
-    
-    func peripheralManager(_ peripheral: CBPeripheralManager, didAdd service: CBService, error: Error?) {
-        if error == nil {
-            print("service added:" + service.description)
-            textField.text.append("Bladder service added\n")
-            startAdvertising()
-        }
-        else if let e = error {
-            print ("error adding service " + e.localizedDescription)
-            textField.text.append("Error adding service " + e.localizedDescription + "\n")
-
-        }
-    }
-    func peripheralManagerDidStartAdvertising(_ peripheral: CBPeripheralManager, error: Error?) {
-        if error == nil {
-            print("advertising begun")
-            textField.text.append("Advertising begun\n")
-        }
-        else if let e = error {
-            print ("error advertising")
-            textField.text.append("Error advertising: " + e.localizedDescription + "\n")
-        }
-    }
-    
-    func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest) {
-        if request.characteristic.uuid == sensorArrayCharacteristicUUID {
-//            if request.offset > sensorArrayCharacteristic!.value!.count {
-//                peripheralManager?.respond(to: request, withResult: .invalidOffset)
-//                print ("invalid offset in request")
-//                textField.text.append("Invalid offset in request\n")
-//                return
-//            }
-            
-            request.value = sensorReadingData!.subdata(in: request.offset..<sensorReadingData!.count)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to request\n")
-        }
-        else if request.characteristic.uuid == led1CharacteristicUUID {
-            request.value = sensorReadingData!.subdata(in: request.offset..<3)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to led1 request\n")
-        }
-        else if request.characteristic.uuid == led2CharacteristicUUID {
-            request.value = sensorReadingData!.subdata(in: (request.offset+3)..<6)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to led2 request\n")
-        }
-        else if request.characteristic.uuid == led3CharacteristicUUID {
-            request.value = sensorReadingData!.subdata(in: (request.offset+6)..<9)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to led3 request\n")
-        }
-        else if request.characteristic.uuid == led4CharacteristicUUID {
-            request.value = sensorReadingData!.subdata(in: (request.offset+9)..<12)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to led4 request\n")
-        }
-        else if request.characteristic.uuid == led5CharacteristicUUID {
-            request.value = sensorReadingData!.subdata(in: (request.offset+12)..<15)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to led5 request\n")
-        }
-        else if request.characteristic.uuid == led6CharacteristicUUID {
-            request.value = sensorReadingData!.subdata(in: (request.offset+15)..<18)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to led6 request\n")
-        }
-        else if request.characteristic.uuid == led7CharacteristicUUID {
-            request.value = sensorReadingData!.subdata(in: (request.offset+18)..<21)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to led7 request\n")
-        }
-        else if request.characteristic.uuid == led8CharacteristicUUID {
-            request.value = sensorReadingData!.subdata(in: (request.offset+21)..<24)
-            peripheralManager?.respond(to: request, withResult: .success)
-            print ("responded to request")
-            textField.text.append("Responded to led8 request\n")
-        }
-        else
-        {
-            peripheralManager?.respond(to: request, withResult: .attributeNotFound)
-            print ("invalid characteristic in request")
-            textField.text.append("Invalid characteristic in request\n")
-        }
-    }
-    
-    func peripheralManager(_ peripheral: CBPeripheralManager,
-                           central: CBCentral,
-                           didSubscribeTo characteristic: CBCharacteristic) {
-        if !centralIsSubscribed {
-            centralIsSubscribed = true
-            startMeasuring()
-        }
-    }
-    
-    func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
-        if centralIsSubscribed {
-            centralIsSubscribed = false
-            stopMeasuring()
-        }
-    }
-    
-    func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {
-        let data = sensorReadingData!.subdata(in: ((ledIndex - 1)*3)..<(ledIndex * 3))
-        let success = peripheralManager!.updateValue(data, for: ledCharacteristics[ledIndex-1], onSubscribedCentrals: nil)
-        if success {
-            ledIndex = (ledIndex % 8) + 1
-            channelIsFull = false
-        }
-    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-//        populateReadings()
-//        createReadingsBytes()
         startupBluetooth()
+        
+//        NotificationCenter.default.addObserver(
+//            self,
+//            selector: #selector(applicationSuspended),
+//            name: .UIApplicationDidEnterBackground,
+//            object: nil)
+//        
+//        NotificationCenter.default.addObserver(
+//            self,
+//            selector: #selector(applicationResumed),
+//            name: .UIApplicationDidBecomeActive,
+//            object: nil)
+        
+        UIApplication.shared.isIdleTimerDisabled = true
     }
 
     override func didReceiveMemoryWarning() {
@@ -279,8 +160,6 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
             else {
                 channelIsFull = true
             }
-
-            
         }
     }
     
@@ -292,6 +171,150 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate {
     
     func stopMeasuring() {
         timer?.invalidate()
+    }
+    
+    
+    @objc func applicationSuspended() {
+
+    }
+    
+    @objc func applicationResumed() {
+
+    }
+    
+    
+    //MARK: PeripheralManagerDelegate
+    
+    func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
+        print("Manager updated state: \(peripheral.state.rawValue)")
+        textField.text.append("Manager updated state:")
+        
+        if (peripheral.state == .poweredOn) {
+            textField.text.append(" poweredOn\n")
+            setupServices()
+        }
+        else {
+            textField.text.append(" other than poweredOn\n")
+        }
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager, didAdd service: CBService, error: Error?) {
+        if error == nil {
+            print("service added:" + service.description)
+            textField.text.append("Bladder service added\n")
+            startAdvertising()
+        }
+        else if let e = error {
+            print ("error adding service " + e.localizedDescription)
+            textField.text.append("Error adding service " + e.localizedDescription + "\n")
+            
+        }
+    }
+    
+    func peripheralManagerDidStartAdvertising(_ peripheral: CBPeripheralManager, error: Error?) {
+        if error == nil {
+            print("advertising begun")
+            textField.text.append("Advertising begun\n")
+        }
+        else if let e = error {
+            print ("error advertising")
+            textField.text.append("Error advertising: " + e.localizedDescription + "\n")
+        }
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest) {
+        if request.characteristic.uuid == sensorArrayCharacteristicUUID {
+            //            if request.offset > sensorArrayCharacteristic!.value!.count {
+            //                peripheralManager?.respond(to: request, withResult: .invalidOffset)
+            //                print ("invalid offset in request")
+            //                textField.text.append("Invalid offset in request\n")
+            //                return
+            //            }
+            
+            request.value = sensorReadingData!.subdata(in: request.offset..<sensorReadingData!.count)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to request\n")
+        }
+        else if request.characteristic.uuid == led1CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: request.offset..<3)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led1 request\n")
+        }
+        else if request.characteristic.uuid == led2CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+3)..<6)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led2 request\n")
+        }
+        else if request.characteristic.uuid == led3CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+6)..<9)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led3 request\n")
+        }
+        else if request.characteristic.uuid == led4CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+9)..<12)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led4 request\n")
+        }
+        else if request.characteristic.uuid == led5CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+12)..<15)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led5 request\n")
+        }
+        else if request.characteristic.uuid == led6CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+15)..<18)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led6 request\n")
+        }
+        else if request.characteristic.uuid == led7CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+18)..<21)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led7 request\n")
+        }
+        else if request.characteristic.uuid == led8CharacteristicUUID {
+            request.value = sensorReadingData!.subdata(in: (request.offset+21)..<24)
+            peripheralManager?.respond(to: request, withResult: .success)
+            print ("responded to request")
+            textField.text.append("Responded to led8 request\n")
+        }
+        else
+        {
+            peripheralManager?.respond(to: request, withResult: .attributeNotFound)
+            print ("invalid characteristic in request")
+            textField.text.append("Invalid characteristic in request\n")
+        }
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager,
+                           central: CBCentral,
+                           didSubscribeTo characteristic: CBCharacteristic) {
+        if !centralIsSubscribed {
+            centralIsSubscribed = true
+            startMeasuring()
+        }
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
+        if centralIsSubscribed {
+            centralIsSubscribed = false
+            stopMeasuring()
+        }
+    }
+    
+    func peripheralManagerIsReady(toUpdateSubscribers peripheral: CBPeripheralManager) {
+        let data = sensorReadingData!.subdata(in: ((ledIndex - 1)*3)..<(ledIndex * 3))
+        let success = peripheralManager!.updateValue(data, for: ledCharacteristics[ledIndex-1], onSubscribedCentrals: nil)
+        if success {
+            ledIndex = (ledIndex % 8) + 1
+            channelIsFull = false
+        }
     }
     
 }
